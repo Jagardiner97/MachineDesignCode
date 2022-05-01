@@ -326,7 +326,7 @@ def stressConcentrationFactors(num, d, dRatio):
     return Kf, Kfs
 
 def safetyFactors(num, dMin, Kf, Kfs):
-    nf, ny = points[num]["n"][0], points[num]["n"][1]
+    nf, ny = 0,0
     while nf < 1.5 or ny < 1.5:
         kb = 0.879 * dMin ** -0.107
         Se = ka * kb * S_ut / 2
@@ -341,35 +341,85 @@ def safetyFactors(num, dMin, Kf, Kfs):
             dMin = standardDiameter(dMin + 0.0001)
     points[num]["Se"] = Se
     points[num]["VonMises"] = [sig_a, sig_m]
+    points[num]["d"] = dMin
     return dMin
 
 
-# Find minimum diameters at W and U
+outputShaftDiameters = {"Do1": 0, "Do2": 0, "Do3": 0, "Do4": 0, "Do5": 0, "Do6": 0, "Do7": 0}
+
+# Find minimum diameter Do4 by checking points U, T, S
 dMinU = minDiameter(4)
 dMinU = safetyFactors(4, dMinU, points[4]["concentrations"][2], points[4]["concentrations"][3])
 
-'''dMinX = minDiameter(7)
-dMinX = safetyFactors(7, dMinX, points[7]["concentrations"][2], points[7]["concentrations"][3])'''
+dMinT = minDiameter(3)
+dMinT = safetyFactors(3, dMinT, points[3]["concentrations"][2], points[3]["concentrations"][3])
+
+dMinS = minDiameter(2)
+KfS, KfsS = stressConcentrationFactors(2, dMinS, 1.1)
+dMinS = safetyFactors(2, dMinS, points[2]["concentrations"][2], points[2]["concentrations"][3])
+
+Do4 = max(dMinU, dMinT, dMinT)
+outputShaftDiameters["Do4"] = Do4
+Do3 = Do4 * 1.1
+outputShaftDiameters["Do3"] = Do3
+
+dMinU = safetyFactors(4, Do4, points[4]["concentrations"][2], points[4]["concentrations"][3])
+dMinT = safetyFactors(3, Do4, points[3]["concentrations"][2], points[3]["concentrations"][3])
+KfS, KfsS = stressConcentrationFactors(2, Do4, 1.1)
+dMinS = safetyFactors(2, Do4, points[2]["concentrations"][2], points[2]["concentrations"][3])
+
+print("")
+
+# Find minimum diameter for Do6 by checking U and X
+dMinX = minDiameter(7)
+dMinX = safetyFactors(7, dMinX, points[7]["concentrations"][2], points[7]["concentrations"][3])
 
 dMinW = minDiameter(6)
-equalRatio = math.sqrt(dMinU / dMinW)
+if dMinW < dMinX:
+    dMinW = dMinX
+equalRatio = math.sqrt(Do4 / dMinW)
 KfW, KfsW = stressConcentrationFactors(6, dMinW, equalRatio)
 dMinW = safetyFactors(6, dMinW, KfW, KfsW)
+Do6 = dMinW
+outputShaftDiameters["Do6"] = Do6
 
 # Check safety factor at V
-dV = equalRatio * dMinW
-KfD, KfsD = stressConcentrationFactors(5, dV, equalRatio)
-dV = safetyFactors(5, dV, KfD, KfsD)
+dMinV = equalRatio * dMinW
+KfD, KfsD = stressConcentrationFactors(5, dMinV, equalRatio)
+dMinV = safetyFactors(5, dMinV, KfD, KfsD)
+Do5 = dMinV
+outputShaftDiameters["Do5"] = Do5
 
-# Check safety factor at
-outputShaftDiameters = {"Do1": 0, "Do2": 0, "Do3": 0, "Do4": 0, "Do5": 0, "Do6": 0, "Do7": 0}
+# Assume that Do1 = Do6 so that the bearings are the same size then check safety factors at Q and R
+leftRatio = math.sqrt(Do3 / Do6)
+KfQ, KfsQ = stressConcentrationFactors(0, Do6, leftRatio)
+dMinQ = safetyFactors(0, Do6, KfQ, KfsQ)
+Do1 = dMinQ
+outputShaftDiameters["Do1"] = Do1
 
-points[4]["d"] = dMinU
-points[5]["d"] = dV
-points[6]["d"] = dMinW
+dMinR = leftRatio * dMinQ
+KfR, KfsR = stressConcentrationFactors(1, dMinR, leftRatio)
+dMinR = safetyFactors(1, dMinR, KfR, KfsR)
+Do2 = dMinR
+outputShaftDiameters["Do2"] = Do2
+
+# Check safety factor at y and z with Do7 = Do6 / 1.1
+Do7 = Do6 / 1.1
+dMinY = minDiameter(8)
+dMinZ = minDiameter(9)
+Do7 = max(Do7, dMinY, dMinZ)
+rightRatio = Do6 / Do7
+KfY, KfsY = stressConcentrationFactors(8, Do7, rightRatio)
+dMinY = safetyFactors(8, Do7, KfY, KfsY)
+dMinZ = safetyFactors(9, Do7, points[9]["concentrations"][2], points[9]["concentrations"][3])
+if dMinY < dMinZ:
+    safetyFactors(8, dMinZ, KfY, KfsY)
+outputShaftDiameters["Do7"] = Do7
+
 
 print("Points on the output shaft")
 for p in points:
-    print(p["name"], p["d"], p["n"], p["VonMises"])
-print(dMinU, dMinW)
+    print("Point", p["name"], ": Diameter:", p["d"], "Safety Factors (fatigue, yield): ", p["n"], "Von Mises Stresses (Alternating, Midrange):", p["VonMises"])
+
+print(outputShaftDiameters)
 print("")

@@ -1,5 +1,6 @@
 import math
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import numpy as np
 
 
@@ -63,6 +64,30 @@ def inputTorqueDiagram(x, torque):
         return torque
     else:
         return 0.0
+
+
+def standardDiameter(d):
+    standardDiameters = [3 / 8, 1 / 2, 5 / 8, 11 / 16, 3 / 4, 55 / 64, 7 / 8, 63 / 64, 1, 1 + 1 / 16, 1 + 1 / 8,
+                         1 + 3 / 16, 1 + 1 / 4, 1 + 5 / 16, 1 + 3 / 8, 1 + 7 / 16, 1.5]
+    i = 0
+    while d > standardDiameters[i]:
+        if d < standardDiameters[i + 1]:
+            return standardDiameters[i + 1]
+        i += 1
+
+
+def readFigures(dRatio, rRatio):
+    fig2 = mpimg.imread("A-15-8.png")
+    fig1 = mpimg.imread("A-15-9.png")
+    fig1plot = plt.imshow(fig1)
+    plt.show()
+    str1 = f"Enter Kt value from Fig.1 using D/d = {dRatio} and r/d = {rRatio}: "
+    Kt = int(input(str1))
+    fig2plot = plt.imshow(fig2)
+    plt.show()
+    str2 = f"Enter Kts value from Fig.2 using D/d = {dRatio} and r/d = {rRatio}: "
+    Kts = int(input(str2))
+    return Kt, Kts
 
 
 # Design variables
@@ -224,8 +249,99 @@ plt.ylabel("Torque (lbf * in)")
 plt.plot(x_t, y_t, label="Torque")
 plt.show()
 '''
+# Initialize dictionaries for each point
+S_ut = 56000
+Sy = 47000
+ka = 2.0 * math.pow(56, -0.217)
+kb = 0.9
+pointDistances = [1.25, 1.75, 2.0, 3.25, 3.5, 3.75, 4.25, 5, 5.25, 6]
+numPoints = len(pointDistances)
+points = []
+roundedShoulders = [1, 2, 5, 8]
+sharpShoulders = [0, 6]
+keyways = [3, 9]
+retainingRings = [4, 7]
+for i in range(10):
+    name = chr(i + 81)
+    xDist = pointDistances[i]
+    # Concentrations listed as Kt, Kts, Kf, Kfs, root(a), and q
+    if i in roundedShoulders:
+        type = "roundShoulder"
+        concentrations = [1.7, 1.5, 1.7, 1.5, 0.02, 0, 0]
+    elif i in sharpShoulders:
+        type = "sharpShoulder"
+        concentrations = [2.7, 2.2, 2.7, 2.2, 0.02, 0, 0]
+    elif i in keyways:
+        type = "keyway"
+        concentrations = [2.14, 3, 2.14, 3, 0, 0]
+    elif i in retainingRings:
+        type = "retainingRing"
+        concentrations = [5, 3, 5, 3, 0, 0]
+    moment = outputMoment(xDist, maxShear, maxMoment)
+    torque = outputTorqueDiagram(xDist, outputShaftTorque)
+    Se = ka * kb * S_ut / 2
+    vonMises = [0, 0]
+    safetyFactors = [0, 0]
+    point = {"name": name, "x": xDist, "type": type, "moment": moment, "torque": torque, "concentrations": concentrations, "Se": Se, "VonMises": vonMises, "n": safetyFactors, "d": 0 }
+    points.append(point)
 
-points = [1.25, 1.75, 2.0, 3.75, 4.25, 5.25]
+n = 1.5
+
+# Finding d at W
+dMin = math.pow(16 * n / math.pi * (2 * Kf * M) / Se + math.sqrt(3 * (Kfs * T) ** 2) / S_ut, 1/3)
+dMin = standardDiameter(dMin)
+shoulders[4]["d_min"] = dMin
+Dmin = dMin * 1.1
+r = dMin * 0.02 # for sharp fillet
+# This is where you find figure values
+kt = 2.4
+kts = 1.55
+
+# Find q
+S_ut_ksi = S_ut / 1000
+neubergBend = 0.246 - 3.08 * (10 ** -3) * S_ut_ksi + 1.51 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
+neubergTors = 0.19 - 2.51 * (10 ** - 3) * S_ut_ksi + 1.35 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
+q = 1 / (1 + neubergBend / math.sqrt(r))
+qs = 1 / (1 + neubergTors / math.sqrt(r))
+
+# Kf and Kfs
+Kf = 1 + q * (kt - 1)
+Kfs = 1 + qs * (kts - 1)
+kb = 0.879 * dMin ** -0.107
+Se = shoulders[4]["ka"] * kb * S_ut / 2
+
+# Calculate sigmas and safety factors
+sig_a = 32 * Kf * shoulders[4]["maxM"] / (math.pi * dMin ** 3)
+sig_m = math.sqrt(3 * (16 * Kfs * shoulders[4]["T"] / (math.pi * dMin ** 3)) ** 2)
+nf = 1 / (sig_a / Se + sig_m / S_ut)
+ny = Sy / (sig_a + sig_m)
+
+print("")
+# Calculate Minimum diameter at U
+moment = outputMoment(3.5, maxShear, maxMoment)
+print("Moment at U:", moment)
+Se = 21041.36
+Kf = 5
+Kfs = 3
+dMinRing = math.pow(16 * n / math.pi * (2 * (Kf * moment) / Se + math.sqrt(3 * (Kfs * outputShaftTorque) ** 2) / S_ut), 1/3)
+dMinRing = 1.1875
+print("Minimum Diameter at ring U:", dMinRing)
+ratio = dMinRing / dMin
+print("bearing to gear shaft ratio", ratio)
+print(1.2 * 1.2)
+
+kb = 0.879 * dMinRing ** -0.107
+Se = ka * kb * S_ut / 2
+
+sig_a_ring = 32 * Kf * moment / (math.pi * dMinRing ** 3)
+sig_m_ring = math.sqrt(3 * (16 * Kfs * outputShaftTorque / (math.pi * dMinRing ** 3)) ** 2)
+
+nf_ring = 1 / (sig_a_ring / Se + sig_m_ring / S_ut)
+ny_ring = Sy / (sig_m_ring + sig_a_ring)
+
+print("")
+
+'''points = [1.25, 1.75, 2.0, 3.75, 4.25, 5.25]
 pointValues = []
 n = 1.5
 S_ut = 56_000 #psi
@@ -251,7 +367,7 @@ while i <= 86:
     i += 1
     Dmin = dRatioMin * d_min
     Dmax = dRatioMax * d_min
-    print("")
+    print("")'''
 
 
 print("")

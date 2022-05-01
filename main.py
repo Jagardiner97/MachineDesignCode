@@ -351,5 +351,7 @@ equalRatio = math.sqrt(dMinU / dMinW)
 KfW, KfsW = stressConcentrationFactors(6, dMinW, equalRatio)
 dMinW = safetyFactors(6, dMinW, KfW, KfsW)
 
+for p in points:
+    print(p)
 print(dMinU, dMinW)
 print("")

@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 
-
 def outputShear(x, bearingLoad, gearLoad):
     if x < 0.875:
         return 0.0
@@ -13,7 +12,6 @@ def outputShear(x, bearingLoad, gearLoad):
         return bearingLoad - gearLoad
     else:
         return 0.0
-
 
 def inputShear(x, bearingLoad, gearLoad):
     if x < 3.375:
@@ -25,7 +23,6 @@ def inputShear(x, bearingLoad, gearLoad):
     else:
         return 0.0
 
-
 def outputMoment(x, shearLoad, mMax):
     if x < 0.875:
         return 0.0
@@ -35,7 +32,6 @@ def outputMoment(x, shearLoad, mMax):
         return mMax - shearLoad * (x - 2.75)
     else:
         return 0.0
-
 
 def inputMoment(x, shearLoad, mMax):
     if x < 3.375:
@@ -47,7 +43,6 @@ def inputMoment(x, shearLoad, mMax):
     else:
         return 0.0
 
-
 def outputTorqueDiagram(x, torque):
     if x < 2.75:
         return 0.0
@@ -56,7 +51,6 @@ def outputTorqueDiagram(x, torque):
     else:
         return 0.0
 
-
 def inputTorqueDiagram(x, torque):
     if x < 1:
         return 0.0
@@ -64,7 +58,6 @@ def inputTorqueDiagram(x, torque):
         return torque
     else:
         return 0.0
-
 
 def standardDiameter(d):
     standardDiameters = [0.375, 0.5, 0.625, 0.6875, 0.75, 0.859375, 0.875, 0.984375, 1, 1.0625, 1.125, 1.1875, 1.25, 1.3125, 1.375, 1.4375, 1.5]
@@ -75,7 +68,6 @@ def standardDiameter(d):
         if d < standardDiameters[i + 1]:
             return standardDiameters[i + 1]
         i += 1
-
 
 def readFigures(dRatio, rRatio):
     if dRatio == 1.1 and rRatio == 0.1:
@@ -218,9 +210,13 @@ print("Axial:", RDx, "lbf")
 print("")
 
 # Create Shear, Moment, and Torque Diagrams for the output shaft
-maxShear = math.sqrt(RCy ** 2 + RCz ** 2)
-maxMoment = maxShear * 1.875
+outputMaxShear = math.sqrt(RCy ** 2 + RCz ** 2)
+outputMaxMoment = outputMaxShear * 1.875
 outputShaftTorque = pinionTorque * 12
+inputMaxShear = 0
+inputMaxMoment = 0
+inputShaftTorque = gearTorque * 12
+print("")
 '''
 x_y = np.linspace(0, 8, 1000)
 x_z = np.linspace(0, 8, 1000)
@@ -260,7 +256,7 @@ plt.ylabel("Torque (lbf * in)")
 plt.plot(x_t, y_t, label="Torque")
 plt.show()
 '''
-# Initialize dictionaries for each point
+# Initialize dictionaries for each point on the output shaft
 S_ut = 56000
 S_ut_ksi = S_ut / 1000
 Sy = 47000
@@ -270,7 +266,7 @@ ka = 2.0 * math.pow(56, -0.217)
 kb = 0.9
 
 pointDistances = [1.25, 1.75, 2.0, 3.25, 3.5, 3.75, 4.25, 5, 5.25, 6]
-points = []
+outputPoints = []
 roundedShoulders = [1, 2, 5, 8]
 sharpShoulders = [0, 6]
 keyways = [3, 9]
@@ -291,26 +287,26 @@ for i in range(10):
     elif i in retainingRings:
         type = "retainingRing"
         concentrations = [5, 3, 5, 3]
-    moment = outputMoment(xDist, maxShear, maxMoment)
+    moment = outputMoment(xDist, outputMaxShear, outputMaxMoment)
     torque = outputTorqueDiagram(xDist, outputShaftTorque)
     Se = ka * kb * S_ut / 2
     vonMises = [0, 0]
     safetyFactors = [0, 0]
     point = {"name": name, "x": xDist, "type": type, "moment": moment, "torque": torque, "concentrations": concentrations, "Se": Se, "VonMises": vonMises, "n": safetyFactors, "d": 0 }
-    points.append(point)
+    outputPoints.append(point)
 
 def minDiameter(num):
-    Kf = points[num]["concentrations"][2]
-    Kfs = points[num]["concentrations"][3]
-    M = points[num]["moment"]
-    T = points[num]["torque"]
-    Se = points[num]["Se"]
+    Kf = outputPoints[num]["concentrations"][2]
+    Kfs = outputPoints[num]["concentrations"][3]
+    M = outputPoints[num]["moment"]
+    T = outputPoints[num]["torque"]
+    Se = outputPoints[num]["Se"]
     dMin = math.pow(16 * n / math.pi * (2 * Kf * M) / Se + math.sqrt(3 * (Kfs * T) ** 2) / S_ut, 1 / 3)
     dMin = standardDiameter(dMin)
     return dMin
 
 def stressConcentrationFactors(num, d, dRatio):
-    rRatio = points[num]["concentrations"][4]
+    rRatio = outputPoints[num]["concentrations"][4]
     r = d * rRatio
     kt, kts = readFigures(dRatio, rRatio)
 
@@ -323,15 +319,15 @@ def stressConcentrationFactors(num, d, dRatio):
     Kfs = 1 + qs * (kts - 1)
 
     # Save to Dictionary
-    points[num]["concentrations"][0] = kt
-    points[num]["concentrations"][1] = kts
-    points[num]["concentrations"][2] = Kf
-    points[num]["concentrations"][3] = Kfs
+    outputPoints[num]["concentrations"][0] = kt
+    outputPoints[num]["concentrations"][1] = kts
+    outputPoints[num]["concentrations"][2] = Kf
+    outputPoints[num]["concentrations"][3] = Kfs
 
-    points[num]["concentrations"][5] = neubergBend
-    points[num]["concentrations"][6] = neubergTors
-    points[num]["concentrations"][7] = q
-    points[num]["concentrations"][8] = qs
+    outputPoints[num]["concentrations"][5] = neubergBend
+    outputPoints[num]["concentrations"][6] = neubergTors
+    outputPoints[num]["concentrations"][7] = q
+    outputPoints[num]["concentrations"][8] = qs
 
     return Kf, Kfs
 
@@ -340,18 +336,18 @@ def safetyFactors(num, dMin, Kf, Kfs):
     while nf < 1.5 or ny < 1.5:
         kb = 0.879 * dMin ** -0.107
         Se = ka * kb * S_ut / 2
-        sig_a = 32 * Kf * points[num]["moment"] / (math.pi * dMin ** 3)
-        sig_m = math.sqrt(3 * (16 * Kfs * points[num]["torque"] / (math.pi * dMin ** 3)) ** 2)
+        sig_a = 32 * Kf * outputPoints[num]["moment"] / (math.pi * dMin ** 3)
+        sig_m = math.sqrt(3 * (16 * Kfs * outputPoints[num]["torque"] / (math.pi * dMin ** 3)) ** 2)
         nf = 1 / (sig_a / Se + sig_m / S_ut)
         ny = Sy / (sig_a + sig_m)
         if nf > 1.5 and ny > 1.5:
-            points[num]["n"][0] = nf
-            points[num]["n"][1] = ny
+            outputPoints[num]["n"][0] = nf
+            outputPoints[num]["n"][1] = ny
         else:
             dMin = standardDiameter(dMin + 0.0001)
-    points[num]["Se"] = Se
-    points[num]["VonMises"] = [sig_a, sig_m]
-    points[num]["d"] = dMin
+    outputPoints[num]["Se"] = Se
+    outputPoints[num]["VonMises"] = [sig_a, sig_m]
+    outputPoints[num]["d"] = dMin
     return dMin
 
 
@@ -359,30 +355,30 @@ outputShaftDiameters = {"Do1": 0, "Do2": 0, "Do3": 0, "Do4": 0, "Do5": 0, "Do6":
 
 # Find minimum diameter Do4 by checking points U, T, S
 dMinU = minDiameter(4)
-dMinU = safetyFactors(4, dMinU, points[4]["concentrations"][2], points[4]["concentrations"][3])
+dMinU = safetyFactors(4, dMinU, outputPoints[4]["concentrations"][2], outputPoints[4]["concentrations"][3])
 
 dMinT = minDiameter(3)
-dMinT = safetyFactors(3, dMinT, points[3]["concentrations"][2], points[3]["concentrations"][3])
+dMinT = safetyFactors(3, dMinT, outputPoints[3]["concentrations"][2], outputPoints[3]["concentrations"][3])
 
 dMinS = minDiameter(2)
 KfS, KfsS = stressConcentrationFactors(2, dMinS, 1.1)
-dMinS = safetyFactors(2, dMinS, points[2]["concentrations"][2], points[2]["concentrations"][3])
+dMinS = safetyFactors(2, dMinS, outputPoints[2]["concentrations"][2], outputPoints[2]["concentrations"][3])
 
 Do4 = max(dMinU, dMinT, dMinT)
 outputShaftDiameters["Do4"] = Do4
 Do3 = Do4 * 1.1
 outputShaftDiameters["Do3"] = Do3
 
-dMinU = safetyFactors(4, Do4, points[4]["concentrations"][2], points[4]["concentrations"][3])
-dMinT = safetyFactors(3, Do4, points[3]["concentrations"][2], points[3]["concentrations"][3])
+dMinU = safetyFactors(4, Do4, outputPoints[4]["concentrations"][2], outputPoints[4]["concentrations"][3])
+dMinT = safetyFactors(3, Do4, outputPoints[3]["concentrations"][2], outputPoints[3]["concentrations"][3])
 KfS, KfsS = stressConcentrationFactors(2, Do4, 1.1)
-dMinS = safetyFactors(2, Do4, points[2]["concentrations"][2], points[2]["concentrations"][3])
+dMinS = safetyFactors(2, Do4, outputPoints[2]["concentrations"][2], outputPoints[2]["concentrations"][3])
 
 print("")
 
 # Find minimum diameter for Do6 by checking U and X
 dMinX = minDiameter(7)
-dMinX = safetyFactors(7, dMinX, points[7]["concentrations"][2], points[7]["concentrations"][3])
+dMinX = safetyFactors(7, dMinX, outputPoints[7]["concentrations"][2], outputPoints[7]["concentrations"][3])
 
 dMinW = minDiameter(6)
 if dMinW < dMinX:
@@ -421,15 +417,46 @@ Do7 = max(Do7, dMinY, dMinZ)
 rightRatio = Do6 / Do7
 KfY, KfsY = stressConcentrationFactors(8, Do7, rightRatio)
 dMinY = safetyFactors(8, Do7, KfY, KfsY)
-dMinZ = safetyFactors(9, Do7, points[9]["concentrations"][2], points[9]["concentrations"][3])
+dMinZ = safetyFactors(9, Do7, outputPoints[9]["concentrations"][2], outputPoints[9]["concentrations"][3])
 if dMinY < dMinZ:
     safetyFactors(8, dMinZ, KfY, KfsY)
 outputShaftDiameters["Do7"] = max(Do7, dMinY, dMinZ)
 
-
 print("Points on the output shaft")
-for p in points:
+for p in outputPoints:
     print("Point", p["name"], ": Diameter:", p["d"], "Safety Factors (fatigue, yield): ", p["n"], "Von Mises Stresses (Alternating, Midrange):", p["VonMises"])
-
-print(outputShaftDiameters)
 print("")
+print(outputShaftDiameters)
+
+# Initialize Dictionaries for each point on the input shaft "G to P"
+inputShaftDiameters = {"Di1": 0, "Di2": 0, "Di3": 0, "Di4": 0, "Di5": 0, "Di6": 0, "Di7": 0}
+inputPointDistances = [2.0, 2.75, 3.0, 3.75, 4.25, 4.5, 4.75, 6.0, 6.25, 6.75]
+inputPoints = []
+roundedShoulders = [1, 4, 7, 8]
+sharpShoulders = [3, 9]
+keyways = [0, 6]
+retainingRings = [2, 5]
+for i in range(10):
+    name = chr(i + 73)
+    xDist = inputPointDistances[i]
+    # Concentrations listed as Kt, Kts, Kf, Kfs, (r/d), root(a)bend, root(a)tors, q, qs
+    if i in roundedShoulders:
+        type = "roundShoulder"
+        concentrations = [1.7, 1.5, 1.7, 1.5, 0.1, 0, 0, 0, 0]
+    elif i in sharpShoulders:
+        type = "sharpShoulder"
+        concentrations = [2.7, 2.2, 2.7, 2.2, 0.02, 0, 0, 0, 0]
+    elif i in keyways:
+        type = "keyway"
+        concentrations = [2.14, 3, 2.14, 3]
+    elif i in retainingRings:
+        type = "retainingRing"
+        concentrations = [5, 3, 5, 3]
+    moment = inputMoment(xDist, inputMaxShear, inputMaxMoment)
+    torque = inputTorqueDiagram(xDist, inputShaftTorque)
+    Se = ka * kb * S_ut / 2
+    vonMises = [0, 0]
+    safetyFactors = [0, 0]
+    point = {"name": name, "x": xDist, "type": type, "moment": moment, "torque": torque, "concentrations": concentrations, "Se": Se, "VonMises": vonMises, "n": safetyFactors, "d": 0 }
+    inputPoints.append(point)
+

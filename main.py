@@ -78,6 +78,16 @@ def standardDiameter(d):
 
 
 def readFigures(dRatio, rRatio):
+    if dRatio == 1.1 and rRatio == 0.1:
+        return 1.6, 1.2
+    elif dRatio == 1.3142574813455419 and rRatio == 0.02:
+        return 2.8, 2.2
+    elif dRatio == 1.3142574813455419 and rRatio == 0.1:
+        return 1.6, 1.4
+    elif dRatio == 1.3784048752090223 and rRatio == 0.02:
+        return 2.8, 2.2
+    elif dRatio == 1.3784048752090223 and rRatio == 0.1:
+        return 1.65, 1.4
     fig2 = mpimg.imread("A-15-8.png")
     fig1 = mpimg.imread("A-15-9.png")
     fig1plot = plt.imshow(fig1)
@@ -414,7 +424,7 @@ dMinY = safetyFactors(8, Do7, KfY, KfsY)
 dMinZ = safetyFactors(9, Do7, points[9]["concentrations"][2], points[9]["concentrations"][3])
 if dMinY < dMinZ:
     safetyFactors(8, dMinZ, KfY, KfsY)
-outputShaftDiameters["Do7"] = Do7
+outputShaftDiameters["Do7"] = max(Do7, dMinY, dMinZ)
 
 
 print("Points on the output shaft")

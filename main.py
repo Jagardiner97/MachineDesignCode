@@ -67,9 +67,10 @@ def inputTorqueDiagram(x, torque):
 
 
 def standardDiameter(d):
-    standardDiameters = [3 / 8, 1 / 2, 5 / 8, 11 / 16, 3 / 4, 55 / 64, 7 / 8, 63 / 64, 1, 1 + 1 / 16, 1 + 1 / 8,
-                         1 + 3 / 16, 1 + 1 / 4, 1 + 5 / 16, 1 + 3 / 8, 1 + 7 / 16, 1.5]
+    standardDiameters = [0.375, 0.5, 0.625, 0.6875, 0.75, 0.859375, 0.875, 0.984375, 1, 1.0625, 1.125, 1.1875, 1.25, 1.3125, 1.375, 1.4375, 1.5]
     i = 0
+    if d < standardDiameters[0]:
+        return standardDiameters[0]
     while d > standardDiameters[i]:
         if d < standardDiameters[i + 1]:
             return standardDiameters[i + 1]
@@ -295,7 +296,8 @@ def minDiameter(num):
     T = points[num]["torque"]
     Se = points[num]["Se"]
     dMin = math.pow(16 * n / math.pi * (2 * Kf * M) / Se + math.sqrt(3 * (Kfs * T) ** 2) / S_ut, 1 / 3)
-    return standardDiameter(dMin)
+    dMin = standardDiameter(dMin)
+    return dMin
 
 def stressConcentrationFactors(num, d, dRatio):
     rRatio = points[num]["concentrations"][4]
@@ -346,12 +348,28 @@ def safetyFactors(num, dMin, Kf, Kfs):
 dMinU = minDiameter(4)
 dMinU = safetyFactors(4, dMinU, points[4]["concentrations"][2], points[4]["concentrations"][3])
 
+'''dMinX = minDiameter(7)
+dMinX = safetyFactors(7, dMinX, points[7]["concentrations"][2], points[7]["concentrations"][3])'''
+
 dMinW = minDiameter(6)
 equalRatio = math.sqrt(dMinU / dMinW)
 KfW, KfsW = stressConcentrationFactors(6, dMinW, equalRatio)
 dMinW = safetyFactors(6, dMinW, KfW, KfsW)
 
+# Check safety factor at V
+dV = equalRatio * dMinW
+KfD, KfsD = stressConcentrationFactors(5, dV, equalRatio)
+dV = safetyFactors(5, dV, KfD, KfsD)
+
+# Check safety factor at
+outputShaftDiameters = {"Do1": 0, "Do2": 0, "Do3": 0, "Do4": 0, "Do5": 0, "Do6": 0, "Do7": 0}
+
+points[4]["d"] = dMinU
+points[5]["d"] = dV
+points[6]["d"] = dMinW
+
+print("Points on the output shaft")
 for p in points:
-    print(p)
+    print(p["name"], p["d"], p["n"], p["VonMises"])
 print(dMinU, dMinW)
 print("")

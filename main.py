@@ -82,11 +82,11 @@ def readFigures(dRatio, rRatio):
     fig1plot = plt.imshow(fig1)
     plt.show()
     str1 = f"Enter Kt value from Fig.1 using D/d = {dRatio} and r/d = {rRatio}: "
-    Kt = int(input(str1))
+    Kt = float(input(str1))
     fig2plot = plt.imshow(fig2)
     plt.show()
     str2 = f"Enter Kts value from Fig.2 using D/d = {dRatio} and r/d = {rRatio}: "
-    Kts = int(input(str2))
+    Kts = float(input(str2))
     return Kt, Kts
 
 
@@ -251,11 +251,14 @@ plt.show()
 '''
 # Initialize dictionaries for each point
 S_ut = 56000
+S_ut_ksi = S_ut / 1000
 Sy = 47000
+n = 1.5
+
 ka = 2.0 * math.pow(56, -0.217)
 kb = 0.9
+
 pointDistances = [1.25, 1.75, 2.0, 3.25, 3.5, 3.75, 4.25, 5, 5.25, 6]
-numPoints = len(pointDistances)
 points = []
 roundedShoulders = [1, 2, 5, 8]
 sharpShoulders = [0, 6]
@@ -264,19 +267,19 @@ retainingRings = [4, 7]
 for i in range(10):
     name = chr(i + 81)
     xDist = pointDistances[i]
-    # Concentrations listed as Kt, Kts, Kf, Kfs, root(a), and q
+    # Concentrations listed as Kt, Kts, Kf, Kfs, (r/d), root(a)bend, root(a)tors, q, qs
     if i in roundedShoulders:
         type = "roundShoulder"
-        concentrations = [1.7, 1.5, 1.7, 1.5, 0.02, 0, 0]
+        concentrations = [1.7, 1.5, 1.7, 1.5, 0.1, 0, 0, 0, 0]
     elif i in sharpShoulders:
         type = "sharpShoulder"
-        concentrations = [2.7, 2.2, 2.7, 2.2, 0.02, 0, 0]
+        concentrations = [2.7, 2.2, 2.7, 2.2, 0.02, 0, 0, 0, 0]
     elif i in keyways:
         type = "keyway"
-        concentrations = [2.14, 3, 2.14, 3, 0, 0]
+        concentrations = [2.14, 3, 2.14, 3]
     elif i in retainingRings:
         type = "retainingRing"
-        concentrations = [5, 3, 5, 3, 0, 0]
+        concentrations = [5, 3, 5, 3]
     moment = outputMoment(xDist, maxShear, maxMoment)
     torque = outputTorqueDiagram(xDist, outputShaftTorque)
     Se = ka * kb * S_ut / 2
@@ -285,89 +288,68 @@ for i in range(10):
     point = {"name": name, "x": xDist, "type": type, "moment": moment, "torque": torque, "concentrations": concentrations, "Se": Se, "VonMises": vonMises, "n": safetyFactors, "d": 0 }
     points.append(point)
 
-n = 1.5
+def minDiameter(num):
+    Kf = points[num]["concentrations"][2]
+    Kfs = points[num]["concentrations"][3]
+    M = points[num]["moment"]
+    T = points[num]["torque"]
+    Se = points[num]["Se"]
+    dMin = math.pow(16 * n / math.pi * (2 * Kf * M) / Se + math.sqrt(3 * (Kfs * T) ** 2) / S_ut, 1 / 3)
+    return standardDiameter(dMin)
 
-# Finding d at W
-dMin = math.pow(16 * n / math.pi * (2 * Kf * M) / Se + math.sqrt(3 * (Kfs * T) ** 2) / S_ut, 1/3)
-dMin = standardDiameter(dMin)
-shoulders[4]["d_min"] = dMin
-Dmin = dMin * 1.1
-r = dMin * 0.02 # for sharp fillet
-# This is where you find figure values
-kt = 2.4
-kts = 1.55
+def stressConcentrationFactors(num, d, dRatio):
+    rRatio = points[num]["concentrations"][4]
+    r = d * rRatio
+    kt, kts = readFigures(dRatio, rRatio)
 
-# Find q
-S_ut_ksi = S_ut / 1000
-neubergBend = 0.246 - 3.08 * (10 ** -3) * S_ut_ksi + 1.51 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
-neubergTors = 0.19 - 2.51 * (10 ** - 3) * S_ut_ksi + 1.35 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
-q = 1 / (1 + neubergBend / math.sqrt(r))
-qs = 1 / (1 + neubergTors / math.sqrt(r))
+    # Kf and Kfs
+    neubergBend = 0.246 - 3.08 * (10 ** -3) * S_ut_ksi + 1.51 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
+    neubergTors = 0.19 - 2.51 * (10 ** - 3) * S_ut_ksi + 1.35 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
+    q = 1 / (1 + neubergBend / math.sqrt(r))
+    qs = 1 / (1 + neubergTors / math.sqrt(r))
+    Kf = 1 + q * (kt - 1)
+    Kfs = 1 + qs * (kts - 1)
 
-# Kf and Kfs
-Kf = 1 + q * (kt - 1)
-Kfs = 1 + qs * (kts - 1)
-kb = 0.879 * dMin ** -0.107
-Se = shoulders[4]["ka"] * kb * S_ut / 2
+    # Save to Dictionary
+    points[num]["concentrations"][0] = kt
+    points[num]["concentrations"][1] = kts
+    points[num]["concentrations"][2] = Kf
+    points[num]["concentrations"][3] = Kfs
 
-# Calculate sigmas and safety factors
-sig_a = 32 * Kf * shoulders[4]["maxM"] / (math.pi * dMin ** 3)
-sig_m = math.sqrt(3 * (16 * Kfs * shoulders[4]["T"] / (math.pi * dMin ** 3)) ** 2)
-nf = 1 / (sig_a / Se + sig_m / S_ut)
-ny = Sy / (sig_a + sig_m)
+    points[num]["concentrations"][5] = neubergBend
+    points[num]["concentrations"][6] = neubergTors
+    points[num]["concentrations"][7] = q
+    points[num]["concentrations"][8] = qs
 
-print("")
-# Calculate Minimum diameter at U
-moment = outputMoment(3.5, maxShear, maxMoment)
-print("Moment at U:", moment)
-Se = 21041.36
-Kf = 5
-Kfs = 3
-dMinRing = math.pow(16 * n / math.pi * (2 * (Kf * moment) / Se + math.sqrt(3 * (Kfs * outputShaftTorque) ** 2) / S_ut), 1/3)
-dMinRing = 1.1875
-print("Minimum Diameter at ring U:", dMinRing)
-ratio = dMinRing / dMin
-print("bearing to gear shaft ratio", ratio)
-print(1.2 * 1.2)
+    return Kf, Kfs
 
-kb = 0.879 * dMinRing ** -0.107
-Se = ka * kb * S_ut / 2
-
-sig_a_ring = 32 * Kf * moment / (math.pi * dMinRing ** 3)
-sig_m_ring = math.sqrt(3 * (16 * Kfs * outputShaftTorque / (math.pi * dMinRing ** 3)) ** 2)
-
-nf_ring = 1 / (sig_a_ring / Se + sig_m_ring / S_ut)
-ny_ring = Sy / (sig_m_ring + sig_a_ring)
-
-print("")
-
-'''points = [1.25, 1.75, 2.0, 3.75, 4.25, 5.25]
-pointValues = []
-n = 1.5
-S_ut = 56_000 #psi
-i = 81
-while i <= 86:
-    x_curr = points[i - 80]
-    name = chr(i)
-    moment = outputMoment(x_curr, maxShear, maxMoment)
-    torque = outputTorqueDiagram(x_curr, outputShaftTorque)
-    K_a = 2 * ((S_ut / 1000) ** -0.217)
-    K_b = 0.9
-    S_prime = S_ut / 2
-    S_e = K_a * K_b * S_prime
-    K_t = 2.7
-    K_ts = 2.2
-    K_f = 2.7
-    K_fs = 2.2
-    d_min = math.pow(16 * n / math.pi * (2 * K_f * moment) / S_e + math.pow(3 * math.pow(K_fs * torque, 2), 1/2) / S_ut, 1/3)
-    dRatioMin = 1.1
-    dRatioMax = 1.2
-    currPoint = dict(name=chr(i), x=x_curr, moment=moment, torque=torque, K_t=K_t, K_ts=K_ts, K_f=K_f, K_fs=K_fs, K_a=K_a, K_b=K_b, S_prime=S_prime, S_e=S_e)
-    pointValues.append(currPoint)
-    i += 1
-    Dmin = dRatioMin * d_min
-    Dmax = dRatioMax * d_min
-    print("")'''
+def safetyFactors(num, dMin, Kf, Kfs):
+    nf, ny = points[num]["n"][0], points[num]["n"][1]
+    while nf < 1.5 or ny < 1.5:
+        kb = 0.879 * dMin ** -0.107
+        Se = ka * kb * S_ut / 2
+        sig_a = 32 * Kf * points[num]["moment"] / (math.pi * dMin ** 3)
+        sig_m = math.sqrt(3 * (16 * Kfs * points[num]["torque"] / (math.pi * dMin ** 3)) ** 2)
+        nf = 1 / (sig_a / Se + sig_m / S_ut)
+        ny = Sy / (sig_a + sig_m)
+        if nf > 1.5 and ny > 1.5:
+            points[num]["n"][0] = nf
+            points[num]["n"][1] = ny
+        else:
+            dMin = standardDiameter(dMin + 0.0001)
+    points[num]["Se"] = Se
+    points[num]["VonMises"] = [sig_a, sig_m]
+    return dMin
 
 
+# Find minimum diameters at W and U
+dMinU = minDiameter(4)
+dMinU = safetyFactors(4, dMinU, points[4]["concentrations"][2], points[4]["concentrations"][3])
+
+dMinW = minDiameter(6)
+equalRatio = math.sqrt(dMinU / dMinW)
+KfW, KfsW = stressConcentrationFactors(6, dMinW, equalRatio)
+dMinW = safetyFactors(6, dMinW, KfW, KfsW)
+
+print(dMinU, dMinW)
 print("")

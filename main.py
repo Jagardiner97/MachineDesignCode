@@ -3,62 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 
-def outputShear(x, bearingLoad, gearLoad):
-    if x < 0.875:
-        return 0.0
-    elif 0.875 <= x < 2.75:
-        return bearingLoad
-    elif 2.75 <= x < 4.625:
-        return bearingLoad - gearLoad
-    else:
-        return 0.0
-
-def inputShear(x, bearingLoad, gearLoad):
-    if x < 3.375:
-        return 0.0
-    elif 3.375 <= x < 5.25:
-        return bearingLoad
-    elif 5.25 <= x < 7.125:
-        return bearingLoad - gearLoad
-    else:
-        return 0.0
-
-def outputMoment(x, shearLoad, mMax):
-    if x < 0.875:
-        return 0.0
-    elif 0.875 <= x < 2.75:
-        return shearLoad * (x - 0.875)
-    elif 2.75 <= x < 4.625:
-        return mMax - shearLoad * (x - 2.75)
-    else:
-        return 0.0
-
-def inputMoment(x, shearLoad, mMax):
-    if x < 3.375:
-        return 0.0
-    elif 3.375 <= x < 5.25:
-        return shearLoad * (x - 3.375)
-    elif 5.25 <= x < 7.125:
-        return mMax - shearLoad * (x - 5.25)
-    else:
-        return 0.0
-
-def outputTorqueDiagram(x, torque):
-    if x < 2.75:
-        return 0.0
-    elif 2.75 <= x < 7:
-        return torque
-    else:
-        return 0.0
-
-def inputTorqueDiagram(x, torque):
-    if x < 1:
-        return 0.0
-    elif 1 <= x < 5.25:
-        return torque
-    else:
-        return 0.0
-
 def standardDiameter(d):
     standardDiameters = [0.375, 0.5, 0.625, 0.6875, 0.75, 0.859375, 0.875, 0.984375, 1, 1.0625, 1.125, 1.1875, 1.25, 1.3125, 1.375, 1.4375, 1.5]
     i = 0
@@ -86,6 +30,14 @@ def readFigures(dRatio, rRatio):
         return 2.7, 2.2
     elif dRatio == 1.193117518002609 and rRatio == 0.1:
         return 1.65, 1.35
+    elif dRatio == 1.2060453783110545 and rRatio == 0.02:
+        return 2.6, 2.0
+    elif dRatio == 1.2060453783110545 and rRatio == 0.1:
+        return 1.65, 1.35
+    elif dRatio == 1.2649110640673518 and rRatio == 0.02:
+        return 2.7, 2.2
+    elif dRatio == 1.2649110640673518 and rRatio == 0.1:
+        return 1.65, 1.4
     fig2 = mpimg.imread("A-15-8.png")
     fig1 = mpimg.imread("A-15-9.png")
     fig1plot = plt.imshow(fig1)
@@ -195,6 +147,25 @@ print("Wr:", radialLoad, "lbf")
 print("Wa:", axialLoad, "lbf")
 print("")
 
+# Calculate loads on the bearings of the input shaft
+RAz = 1/2 * transverseLoad
+RAy = (-radialLoad * 1.875 + axialLoad * gearDiameter / 2) / (1.875 * 2)
+RAx = 0
+print("Bearing A:")
+print("Transverse: ", RAz, "lbf")
+print("Radial:", RAy, "lbf")
+print("Axial:", RAx, "lbf")
+print("")
+
+RBz = -RAz
+RBy = -radialLoad - RAy
+RBx = axialLoad
+print("Bearing B:")
+print("Transverse: ", RBz, "lbf")
+print("Radial:", RBy, "lbf")
+print("Axial:", RBx, "lbf")
+print("")
+
 # Calculated loads on the bearings of the output shaft
 RCz = 0.5 * transverseLoad
 RCy = (-axialLoad * pinionDiameter / 2 - radialLoad * 1.625) / (2 * 1.625)
@@ -205,7 +176,7 @@ print("Radial:", RCy, "lbf")
 print("Axial:", RCx, "lbf")
 print("")
 
-RDz = RCz
+RDz = -RCz
 RDy = -radialLoad - RCy
 RDx = 0
 print("Bearing D:")
@@ -214,21 +185,123 @@ print("Radial:", RDy, "lbf")
 print("Axial:", RDx, "lbf")
 print("")
 
-# Create Shear, Moment, and Torque Diagrams for the output shaft
-outputMaxShear = math.sqrt(RCy ** 2 + RCz ** 2)
-outputMaxMoment = outputMaxShear * 1.875
+def outputShear(x):
+    if x < 0.875:
+        return 0.0
+    elif 0.875 <= x < 2.75:
+        return math.sqrt(RCy ** 2 + RCz ** 2)
+    elif 2.75 <= x < 4.625:
+        return math.sqrt(transverseLoad ** 2 + radialLoad ** 2) - math.sqrt(RCy ** 2 + RCz ** 2)
+    else:
+        return 0.0
+
+def outputShearY(x):
+    if x < 0.875:
+        return 0.0
+    elif 0.875 <= x < 2.75:
+        return RCy
+    elif 2.75 <= x < 4.625:
+        return radialLoad - RCy
+    else:
+        return 0.0
+
+def outputShearZ(x):
+    if x < 0.875:
+        return 0.0
+    elif 0.875 <= x < 2.75:
+        return RCz
+    elif 2.75 <= x < 4.625:
+        return RCz - transverseLoad
+    else:
+        return 0.0
+
+def inputShear(x):
+    if x < 3.375:
+        return 0.0
+    elif 3.375 <= x < 5.25:
+        return math.sqrt(RAy ** 2 + RAz ** 2)
+    elif 5.25 <= x < 7.125:
+        return math.sqrt(transverseLoad ** 2 + radialLoad ** 2) - math.sqrt(RAy ** 2 + RAz ** 2)
+    else:
+        return 0.0
+
+def inputShearY(x):
+    if x < 3.375:
+        return 0.0
+    elif 3.375 <= x < 5.25:
+        return RAy
+    elif 5.25 <= x < 7.125:
+        return RAy - radialLoad
+    else:
+        return 0.0
+
+def inputShearZ(x):
+    if x < 3.375:
+        return 0.0
+    elif 3.375 <= x < 5.25:
+        return RAz
+    elif 5.25 <= x < 7.125:
+        return RAz - transverseLoad
+    else:
+        return 0.0
+
+
+mMaxOut = outputShear(2.0) * (2.75 - 0.875)
+mMaxIn = inputShear(5.25) * (5.25 - 3.375)
 outputShaftTorque = pinionTorque * 12
-inputMaxShear = outputMaxShear
-inputMaxMoment = outputMaxMoment
 inputShaftTorque = gearTorque * 12
+
+def outputMoment(x):
+    if x < 0.875:
+        return 0.0
+    elif 0.875 <= x < 2.75:
+        return outputShear(x) * (x - 0.875)
+    elif 2.75 <= x <= 4.625:
+        return mMaxOut - outputShear(x) * (x - 2.75)
+    else:
+        return outputMoment(4.624)
+
+def inputMoment(x):
+    if x < 3.375:
+        return 0.0
+    elif 3.375 <= x < 5.25:
+        return inputShear(x) * (x - 3.375)
+    elif 5.25 <= x <= 7.125:
+        return mMaxIn - inputShear(x) * (x - 5.25)
+    else:
+        return inputMoment(7.124)
+
+def outputTorqueDiagram(x):
+    if x < 2.75:
+        return 0.0
+    elif 2.75 <= x < 7:
+        return outputShaftTorque
+    else:
+        return 0.0
+
+def inputTorqueDiagram(x):
+    if x < 1:
+        return 0.0
+    elif 1 <= x < 5.25:
+        return inputShaftTorque
+    else:
+        return 0.0
+
+
+# Create Shear, Moment, and Torque Diagrams for the output shaft
+'''outputMaxShear = math.sqrt(RDy ** 2 + RDz ** 2)
+outputMaxMoment = outputMaxShear * 1.875
+inputMaxShear = outputMaxShear
+inputMaxMoment = outputMaxMoment'''
+
 print("")
 
 x_y = np.linspace(0, 8, 1000)
 x_z = np.linspace(0, 8, 1000)
-vy = np.vectorize(outputShear)
-y_y = vy(x_y, RCy, radialLoad)
-vz = np.vectorize(outputShear)
-y_z = vz(x_z, RCz, transverseLoad)
+vy = np.vectorize(outputShearY)
+y_y = vy(x_y)
+vz = np.vectorize(outputShearZ)
+y_z = vz(x_z)
 
 plt.title("Output Shaft Shear Diagram")
 plt.xlabel("x (in.)")
@@ -240,7 +313,7 @@ plt.show()
 
 x_m = np.linspace(0, 8, 1000)
 vm = np.vectorize(outputMoment)
-y_m = vm(x_m, outputMaxShear, outputMaxMoment)
+y_m = vm(x_m)
 
 plt.title("Output Shaft Moment Diagram")
 plt.xlabel("x (in.)")
@@ -251,7 +324,7 @@ plt.show()
 print("Torque:", outputShaftTorque, "lbf * in")
 x_t = np.linspace(0, 8, 1000)
 vt = np.vectorize(outputTorqueDiagram)
-y_t = vt(x_t, outputShaftTorque)
+y_t = vt(x_t)
 
 plt.title("Output Shaft Torque Diagram")
 plt.xlabel("x (in.)")
@@ -260,6 +333,41 @@ plt.plot(x_t, y_t, label="Torque")
 plt.show()
 
 # Create Shear, Moment, and Torque Diagrams for the input shaft
+x_yi = np.linspace(0, 8, 1000)
+x_zi = np.linspace(0, 8, 1000)
+vyi = np.vectorize(inputShearY)
+y_yi = vy(x_yi)
+vzi = np.vectorize(inputShearZ)
+y_zi = vz(x_zi)
+
+plt.title("Input Shaft Shear Diagram")
+plt.xlabel("x (in.)")
+plt.ylabel("Shear Force (lbf)")
+plt.plot(x_yi, y_yi, label="V_y")
+plt.plot(x_zi, y_zi, label="V_z")
+plt.legend()
+plt.show()
+
+x_mi = np.linspace(0, 8, 1000)
+vmi = np.vectorize(inputMoment)
+y_mi = vm(x_mi)
+
+plt.title("Input Shaft Moment Diagram")
+plt.xlabel("x (in.)")
+plt.ylabel("Bending Moment (lbf*in)")
+plt.plot(x_mi, y_mi, label="Moment")
+plt.show()
+
+print("Torque:", outputShaftTorque, "lbf * in")
+x_ti = np.linspace(0, 8, 1000)
+vti = np.vectorize(inputTorqueDiagram)
+y_ti = vt(x_ti)
+
+plt.title("Input Shaft Torque Diagram")
+plt.xlabel("x (in.)")
+plt.ylabel("Torque (lbf * in)")
+plt.plot(x_ti, y_ti, label="Torque")
+plt.show()
 
 
 # Initialize dictionaries for each point on the output shaft
@@ -293,8 +401,8 @@ for i in range(10):
     elif i in retainingRings:
         type = "retainingRing"
         concentrations = [5, 3, 5, 3]
-    moment = outputMoment(xDist, outputMaxShear, outputMaxMoment)
-    torque = outputTorqueDiagram(xDist, outputShaftTorque)
+    moment = outputMoment(xDist)
+    torque = outputTorqueDiagram(xDist)
     Se = ka * kb * S_ut / 2
     vonMises = [0, 0]
     safetyFactors = [0, 0]
@@ -314,7 +422,10 @@ def minDiameter(num):
 def stressConcentrationFactors(num, d, dRatio):
     rRatio = outputPoints[num]["concentrations"][4]
     r = d * rRatio
-    kt, kts = readFigures(dRatio, rRatio)
+    if dRatio == 1:
+        kt, kts = 1, 1
+    else:
+        kt, kts = readFigures(dRatio, rRatio)
 
     # Kf and Kfs
     neubergBend = 0.246 - 3.08 * (10 ** -3) * S_ut_ksi + 1.51 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)
@@ -452,8 +563,8 @@ for i in range(10):
     elif i in retainingRings:
         type = "retainingRing"
         concentrations = [5, 3, 5, 3]
-    moment = inputMoment(xDist, inputMaxShear, inputMaxMoment)
-    torque = inputTorqueDiagram(xDist, inputShaftTorque)
+    moment = inputMoment(xDist)
+    torque = inputTorqueDiagram(xDist)
     Se = ka * kb * S_ut / 2
     vonMises = [0, 0]
     safetyFactors = [0, 0]
@@ -473,7 +584,10 @@ def inputMinDiameter(num):
 def inputStressConcentrationFactors(num, d, dRatio):
     rRatio = inputPoints[num]["concentrations"][4]
     r = d * rRatio
-    kt, kts = readFigures(dRatio, rRatio)
+    if dRatio == 1:
+        kt, kts = 1, 1
+    else:
+        kt, kts = readFigures(dRatio, rRatio)
 
     # Kf and Kfs
     neubergBend = 0.246 - 3.08 * (10 ** -3) * S_ut_ksi + 1.51 * (10 ** -5) * (S_ut_ksi ** 2) - 2.67 * (10 ** -8) * (S_ut_ksi ** 3)

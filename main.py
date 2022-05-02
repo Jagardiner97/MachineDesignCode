@@ -593,9 +593,8 @@ for p in inputPoints:
 print(f"\nPoints on the output shaft")
 for p in outputPoints:
     print("Point", p["name"], ": Diameter:", p["d"], "Safety Factors (fatigue, yield): ", p["n"], "Von Mises Stresses (Alternating, Midrange):", p["VonMises"])
-print("", file=f)
+print("")
 print("Input Shaft Dimensions:")
 print(inputShaftDiameters)
 print("Output Shaft Dimensions:")
 print(outputShaftDiameters)
-f.close()

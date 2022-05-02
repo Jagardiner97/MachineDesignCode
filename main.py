@@ -100,27 +100,27 @@ def readFigures(dRatio, rRatio):
 
 
 # Design variables
-outputPower = 150 #HP
-inputSpeed = 6700 #rpm
-outputSpeed = 30000 #rpm
+outputPower = 150  # HP
+inputSpeed = 6700  # rpm
+outputSpeed = 30000  # rpm
 outputMinimum = outputSpeed - 0.01 * outputSpeed
 
 # Material Properties
 materialName = "1015 CD Steel"
-tensileStrength = 56 #ksi
-yieldStrength = 47 #ksi
+tensileStrength = 56  # ksi
+yieldStrength = 47  # ksi
 
 # Shaft Properties
-shaftLength = 8 #inches
+shaftLength = 8  # inches
 
 # Gear Properties
-helixAngle = 30 #degrees
+helixAngle = 30  # degrees
 psi = math.radians(helixAngle)
-normalPressureAngle = 20 #degrees
+normalPressureAngle = 20  # degrees
 phi_n = math.radians(normalPressureAngle)
 phi_t = math.atan(math.tan(phi_n) / math.cos(psi))
 transversePressureAngle = math.degrees(phi_t)
-#available in 0.5 inch width increments
+# available in 0.5 inch width increments
 Ks = 1
 Cf = 1
 
@@ -132,9 +132,8 @@ bearingReliability = gearReliability
 bearingLifetime = gearLifetime
 
 # Gear Box Properties
-maxBoxWidth = 15 #inches
-wallThickness = 1.5 #inches
-
+maxBoxWidth = 15  #inches
+wallThickness = 1.5  #inches
 
 # Calculate the gear teeth and rotation speed
 k = 1
@@ -165,7 +164,7 @@ print("")
 pitchOptions = [2, 2.25, 2.5, 3, 4, 6, 8, 10, 12, 16]
 P = (wholePinionTeeth + gearTeeth + 2) / (maxBoxWidth - wallThickness)
 diametralPitch = 0
-maxV = 10000 #ft/min
+maxV = 10000  # ft/min
 maxPinionDiameter = 12 * maxV / (math.pi * actualOutputSpeed)
 i = 0
 pinionDiameter = 100
@@ -198,7 +197,7 @@ print("")
 
 # Calculated loads on the bearings of the output shaft
 RCz = 0.5 * transverseLoad
-RCy = 0.5 * radialLoad
+RCy = (-axialLoad * pinionDiameter / 2 - radialLoad * 1.625) / (2 * 1.625)
 RCx = axialLoad
 print("Bearing C:")
 print("Transverse:", RCz, "lbf")
@@ -207,7 +206,7 @@ print("Axial:", RCx, "lbf")
 print("")
 
 RDz = RCz
-RDy = RCy
+RDy = -radialLoad - RCy
 RDx = 0
 print("Bearing D:")
 print("Transverse:", RDz, "lbf")
@@ -223,7 +222,7 @@ inputMaxShear = outputMaxShear
 inputMaxMoment = outputMaxMoment
 inputShaftTorque = gearTorque * 12
 print("")
-'''
+
 x_y = np.linspace(0, 8, 1000)
 x_z = np.linspace(0, 8, 1000)
 vy = np.vectorize(outputShear)
@@ -238,19 +237,17 @@ plt.plot(x_y, y_y, label="V_y")
 plt.plot(x_z, y_z, label="V_z")
 plt.legend()
 plt.show()
-'''
-'''
+
 x_m = np.linspace(0, 8, 1000)
 vm = np.vectorize(outputMoment)
-y_m = vm(x_m, maxShear, maxMoment)
+y_m = vm(x_m, outputMaxShear, outputMaxMoment)
 
 plt.title("Output Shaft Moment Diagram")
 plt.xlabel("x (in.)")
 plt.ylabel("Bending Moment (lbf*in)")
 plt.plot(x_m, y_m, label="Moment")
 plt.show()
-'''
-'''
+
 print("Torque:", outputShaftTorque, "lbf * in")
 x_t = np.linspace(0, 8, 1000)
 vt = np.vectorize(outputTorqueDiagram)
@@ -261,7 +258,10 @@ plt.xlabel("x (in.)")
 plt.ylabel("Torque (lbf * in)")
 plt.plot(x_t, y_t, label="Torque")
 plt.show()
-'''
+
+# Create Shear, Moment, and Torque Diagrams for the input shaft
+
+
 # Initialize dictionaries for each point on the output shaft
 S_ut = 56000
 S_ut_ksi = S_ut / 1000

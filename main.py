@@ -221,7 +221,7 @@ def inputShear(x):
     elif 3.375 <= x < 5.25:
         return math.sqrt(RAy ** 2 + RAz ** 2)
     elif 5.25 <= x < 7.125:
-        return math.sqrt(transverseLoad ** 2 + radialLoad ** 2) - math.sqrt(RAy ** 2 + RAz ** 2)
+        return math.sqrt(transverseLoad ** 2 + radialLoad ** 2 ) - math.sqrt(RAy ** 2 + RAz ** 2)
     else:
         return 0.0
 
@@ -246,10 +246,12 @@ def inputShearZ(x):
         return 0.0
 
 
-mMaxOut = outputShear(2.0) * (2.75 - 0.875)
+mMaxOut = outputShear(2.75) * (2.75 - 0.875)
 mMaxIn = inputShear(5.25) * (5.25 - 3.375)
 outputShaftTorque = pinionTorque * 12
 inputShaftTorque = gearTorque * 12
+print("Output Torque:", outputShaftTorque)
+print("Input Torque:", inputShaftTorque)
 
 def outputMoment(x):
     if x < 0.875:
